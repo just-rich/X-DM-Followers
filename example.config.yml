@@ -1,0 +1,16 @@
+x_credentials:
+  username: "username_here"  # Your X login username
+  password: "pass_here"  # Your X login password
+  account_name: "username_here"  # Your X account name (for getting followers)
+
+message: "Hey follower! Please follow our primary/main account at @NVSTly\n\nWe had to switch accounts, so would greatly appreciate if you followed the other. You can unfollow this one after too, if you prefer it."
+
+headless: true  # Set to false if you want to see the browser
+
+# Advanced options
+options:
+  dm_interval: 10  # Seconds between DMs
+  retry_failed: true  # Retry failed DMs once
+  max_followers_to_process: 2500  # Limit number of followers to process
+  skip_first_n: 0  # Skip the first N followers (useful to resume after errors)
+  take_screenshots: false  # Enable or disable taking screenshots throughout steps
