@@ -1,7 +1,7 @@
 # X DM Followers
 **Warning: This script may breach X's Terms of Service contract that you agreed to when creating an account. It was made for educational & informational purposes.**
 
-This project is a Python script designed to send direct messages (DMs) to followers on X (formerly known as Twitter) using a headless browser. The script logs into your X account, fetches a list of your followers, and sends a predefined message to each follower.
+This project is a Python script designed to send direct messages (DMs) to followers on X (formerly known as Twitter) using a headless browser. The script logs into your X account, fetches a list of your followers, and sends a predefined message to each follower. **This script does NOT use the X API, as their free tier does not include sending DMs. It uses a web browser to login, list followers, & send DMs to these users.**
 
 ## Features
 
