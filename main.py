@@ -240,10 +240,14 @@ def get_followers(driver, account_name, options):
         scroll_count += 1
         found_new = False
         
-        # First try to get all user cells directly
+        # First try to get all user cells within the followers section only
         try:
-            user_cells = driver.find_elements(By.CSS_SELECTOR, "[data-testid='UserCell']")
-            logger.debug(f"Found {len(user_cells)} user cells")
+            # Look specifically for the main timeline section which contains the followers
+            timeline = driver.find_element(By.CSS_SELECTOR, "[data-testid='primaryColumn']")
+            
+            # Find user cells only within the main timeline
+            user_cells = timeline.find_elements(By.CSS_SELECTOR, "[data-testid='UserCell']")
+            logger.debug(f"Found {len(user_cells)} user cells in the followers section")
             
             for cell in user_cells:
                 try:
@@ -263,32 +267,57 @@ def get_followers(driver, account_name, options):
                 except Exception as e:
                     logger.debug(f"Error extracting username from cell: {e}")
                     continue
+                    
+            # If we didn't find any user cells via the direct approach, try a more targeted approach
+            if len(user_cells) == 0:
+                # Try to identify the main section containing followers (usually a section role or specific div)
+                followers_section = driver.execute_script("""
+                    // First try to find the main followers section
+                    var sections = document.querySelectorAll('section');
+                    var followersSection = null;
+                    
+                    // Iterate through sections to find the one with follower cells
+                    for (var i = 0; i < sections.length; i++) {
+                        // Check if this section contains UserCell elements
+                        if (sections[i].querySelectorAll('[data-testid="UserCell"]').length > 0) {
+                            return sections[i];
+                        }
+                    }
+                    
+                    // If no sections found with UserCells, try to find the timeline
+                    return document.querySelector('[data-testid="primaryColumn"] > div');
+                """)
+                
+                if followers_section:
+                    # Now extract usernames from the followers section
+                    usernames = driver.execute_script("""
+                        var section = arguments[0];
+                        var usernames = [];
+                        
+                        // Get all profile links in this section
+                        var links = section.querySelectorAll('a');
+                        for (var i = 0; i < links.length; i++) {
+                            var href = links[i].getAttribute('href');
+                            if (href && href.startsWith('/')) {
+                                var username = href.substring(1).split('/')[0];
+                                // Make sure it's not empty and not a system page
+                                if (username && !['tos', 'privacy', 'about', 'help', 'explore', 
+                                                 'notifications', 'home', 'i', 'messages', 
+                                                 'settings', 'search', 'compose', 'status'].includes(username)) {
+                                    usernames.push(username);
+                                }
+                            }
+                        }
+                        return usernames;
+                    """, followers_section)
+                    
+                    if usernames:
+                        for username in usernames:
+                            if username not in followers:
+                                followers.append(username)
+                                found_new = True
         except Exception as e:
             logger.debug(f"Error finding UserCell elements: {e}")
-        
-        # If no UserCells found, try a more general approach
-        if len(followers) == 0:
-            logger.info("No UserCells found, trying alternative approach...")
-            try:
-                # Get all links that might be profile links
-                links = driver.find_elements(By.TAG_NAME, "a")
-                
-                for link in links:
-                    try:
-                        href = link.get_attribute('href')
-                        if href and href.startswith('https://x.com/'):
-                            username = href.split('/')[-1]
-                            
-                            # Filter out non-profile paths
-                            if (username and username not in excluded_pages and 
-                                not any(excluded in href for excluded in ['/status/', '/i/', '/search'])):
-                                if username not in followers:
-                                    followers.append(username)
-                                    found_new = True
-                    except Exception as e:
-                        continue
-            except Exception as e:
-                logger.debug(f"Error finding profile links: {e}")
         
         # Break if no new followers loaded after scrolling multiple times
         if not found_new:
