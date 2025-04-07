@@ -14,6 +14,7 @@ import yaml
 # Constants
 CONFIG_FILE = "config.yml"
 PROGRESS_FILE = "messaged_followers.json"
+FAIL_FILE = "messaged_fail.json"
 LOG_FILE = f"x_dm_script_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
 DM_INTERVAL = 15  # seconds between DMs
 
@@ -41,7 +42,7 @@ def setup_logging():
     logger.addHandler(console_handler)
     
     return logger
-    
+
 def get_advanced_options(config):
     """Extract advanced options from config with defaults"""
     if 'options' not in config:
@@ -71,22 +72,34 @@ def load_config():
         raise
 
 def load_progress():
-    """Load list of already messaged followers"""
+    """Load list of already messaged followers and failed attempts"""
+    progress = {"messaged_usernames": [], "started_at": datetime.now().isoformat(), "stats": {"success": 0, "failed": 0}}
+    failed = []
+
     if os.path.exists(PROGRESS_FILE):
         logger.info(f"Loading progress from {PROGRESS_FILE}")
         with open(PROGRESS_FILE, 'r') as f:
             progress = json.load(f)
             logger.info(f"Found {len(progress.get('messaged_usernames', []))} previously messaged users")
-            return progress
-    logger.info("No previous progress found, starting fresh")
-    return {"messaged_usernames": [], "started_at": datetime.now().isoformat(), "stats": {"success": 0, "failed": 0}}
 
-def save_progress(progress):
-    """Save list of messaged followers"""
+    if os.path.exists(FAIL_FILE):
+        logger.info(f"Loading failed attempts from {FAIL_FILE}")
+        with open(FAIL_FILE, 'r') as f:
+            failed = json.load(f)
+            logger.info(f"Found {len(failed)} previously failed attempts")
+
+    return progress, failed
+
+def save_progress(progress, failed):
+    """Save list of messaged followers and failed attempts"""
     progress["last_updated"] = datetime.now().isoformat()
     with open(PROGRESS_FILE, 'w') as f:
         json.dump(progress, f)
     logger.info(f"Progress saved - Success: {progress['stats']['success']}, Failed: {progress['stats']['failed']}")
+
+    with open(FAIL_FILE, 'w') as f:
+        json.dump(failed, f)
+    logger.info(f"Failed attempts saved - Total Failed: {len(failed)}")
 
 def setup_driver(headless=True):
     """Set up and return a configured webdriver"""
@@ -705,7 +718,7 @@ def main():
     options = get_advanced_options(config)
     
     # Load progress
-    progress = load_progress()
+    progress, failed = load_progress()
     messaged_usernames = set(progress.get("messaged_usernames", []))
     
     # Initialize stats if not present
@@ -773,10 +786,11 @@ def main():
                 # Track failed attempts
                 progress["stats"]["failed"] += 1
                 fail_count += 1
+                failed.append(follower)
                 logger.warning(f"Failed to send DM to @{follower}")
             
             # Save progress after each attempt
-            save_progress(progress)
+            save_progress(progress, failed)
             
             # Sleep to avoid rate limiting
             if i < len(followers_to_message) - 1:  # Don't wait after the last message
