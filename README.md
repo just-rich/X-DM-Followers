@@ -87,6 +87,7 @@ If the `take_screenshots` option is enabled, the script will save screenshots at
 Feel free to fork this project and submit pull requests.
 
 ## To Do / Notes
+- Add support for importing a [downloaded X data archive](https://x.com/settings/download_your_data), extracting follower usernames or profile links, and sending DMs to users from the generated list
 - If a follower has sent you a DM and you haven't accepted the message, it will fail to send that user a DM.
 - Regarding this error, "WARNING - Error checking input content: Message: stale element reference: stale element not found in the current frame", it may happen requently and the DM might not be verified but it does send the message.
 - Add pre-verification, so before sending DM it checks to see if that message has already been sent to the user. This would be ideal in scenerios where `messaged_followers.json` is removed/lost, as well any users added to it that weren't actually sent a DM.
